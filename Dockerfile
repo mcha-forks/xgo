@@ -3,7 +3,7 @@
 ARG GO_VERSION="1.22.1"
 ARG OSXCROSS_VERSION="11.3"
 ARG XX_VERSION="1.3.0"
-ARG ALPINE_VERSION="3.18"
+ARG ALPINE_VERSION="3.19"
 ARG PLATFORMS="linux/386 linux/amd64 linux/arm64 linux/arm/v5 linux/arm/v6 linux/arm/v7 linux/mips linux/mipsle linux/mips64 linux/mips64le linux/ppc64le linux/riscv64 linux/s390x windows/386 windows/amd64"
 
 FROM --platform=$BUILDPLATFORM tonistiigi/xx:${XX_VERSION} AS xx
@@ -12,6 +12,11 @@ COPY --from=xx / /
 ENV CGO_ENABLED=0
 RUN apk add --no-cache file git
 WORKDIR /src
+
+FROM base AS ghq
+ARG GHQ_VERSION="1.5.0"
+RUN --mount=type=cache,target=/go/pkg/mod \
+  go install github.com/x-motemen/ghq@v${GHQ_VERSION}
 
 FROM base AS version
 RUN --mount=target=. \
@@ -100,6 +105,7 @@ EOT
 FROM crazymax/osxcross:${OSXCROSS_VERSION} AS osxcross
 FROM goxx-base
 COPY --from=build /usr/bin/xgo /usr/local/bin/xgo
+COPY --from=ghq /go/bin/ghq /usr/local/bin/ghq
 COPY --from=osxcross /osxcross /osxcross
 
 ENV XGO_IN_XGO="1"
